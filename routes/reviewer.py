@@ -107,6 +107,51 @@ def review(doc_id):
     history = Review.query.filter_by(document_id=doc.id).order_by(Review.created_at.desc()).all()
     return render_template("reviewer/detail.html", doc=doc, history=history)
 
+
+# ==========================================
+# ROUTE BARU: UNTUK EDIT RIWAYAT REVIEW
+# ==========================================
+@reviewer_bp.route("/review/<int:review_id>/edit", methods=["POST"])
+@login_required
+@role_required(ROLE_REVIEWER)
+def edit_review(review_id):
+    review = Review.query.get_or_404(review_id)
+    doc = review.document
+    
+    status = request.form.get("status")
+    notes_list = request.form.getlist("notes[]")
+
+    if status not in ALL_STATUSES:
+        flash("Status tidak valid.", "danger")
+        return redirect(url_for("reviewer.review", doc_id=doc.id))
+
+    # 1. Update Status Review
+    review.status = status
+
+    # 2. Update Catatan (Notes) berdasarkan urutan item
+    items = sorted(review.items, key=lambda x: x.order)
+    for i, item in enumerate(items):
+        if i < len(notes_list):
+            item.notes = notes_list[i].strip()
+
+    # 3. Sinkronisasi Status Dokumen (Jika review ini adalah review paling baru)
+    latest_review = Review.query.filter_by(document_id=doc.id).order_by(Review.created_at.desc()).first()
+    if latest_review and latest_review.id == review.id:
+        doc.status = status
+
+    db.session.commit()
+
+    # (Opsional) Kirim WA Notifikasi Pembaruan
+    try:
+        _send_review_wa(doc, status, "Review telah diperbarui oleh Reviewer. Silakan cek aplikasi untuk detail terbarunya.")
+        flash("Riwayat review berhasil diperbarui & WA notifikasi terkirim.", "success")
+    except Exception as exc:
+        flash(f"Riwayat review diperbarui, namun WA gagal: {exc}", "warning")
+
+    return redirect(url_for("reviewer.review", doc_id=doc.id))
+# ==========================================
+
+
 @reviewer_bp.route("/screenshot/<path:filename>")
 @login_required
 def screenshot(filename):

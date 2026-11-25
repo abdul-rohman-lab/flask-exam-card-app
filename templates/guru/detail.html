@@ -41,6 +41,27 @@
     </div>
   </form>
 </div>
+
+<!-- FORM BARU (HANYA MUNCUL JIKA STATUS DISETUJUI) -->
+{% elif doc.status == 'Disetujui' %}
+<div class="alert alert-success shadow-sm mb-4">
+  <h5 class="alert-heading">Dokumen Telah Disetujui!</h5>
+  <p>Selamat, dokumen Anda telah disetujui oleh Bu Nelly. Silakan lengkapi data dengan mengunggah <strong>Link Duplikat</strong> dan <strong>Link Kolaborasi (Microsoft Form)</strong>.</p>
+  <hr>
+  <form method="post" action="{{ url_for('guru.submit_links', doc_id=doc.id) }}" class="row g-3">
+    <div class="col-md-5">
+      <label class="form-label fw-bold">Link Duplikat</label>
+      <input type="url" name="duplicate_link" class="form-control" value="{{ doc.duplicate_link or '' }}" placeholder="https://..." required>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label fw-bold">Link Kolaborasi (Microsoft Form)</label>
+      <input type="url" name="collab_link" class="form-control" value="{{ doc.collab_link or '' }}" placeholder="https://forms.office.com/..." required>
+    </div>
+    <div class="col-md-2 d-flex align-items-end">
+      <button class="btn btn-success w-100" onclick="return confirm('Simpan link ini?')">Simpan</button>
+    </div>
+  </form>
+</div>
 {% endif %}
 
 <h5>Riwayat Feedback Reviewer</h5>
@@ -97,6 +118,6 @@
     </div>
   </div>
 {% else %}
-  <div class="alert alert-info">Belum ada review dari Bu Neli.</div>
+  <div class="alert alert-info">Belum ada review dari Bu Nelly.</div>
 {% endfor %}
 {% endblock %}

@@ -56,7 +56,7 @@
                     </div>
 
                     <div id="previewContainer"></div>
-                    <button type="submit" class="btn btn-success w-100 mt-3">Simpan Review & Kirim Email</button>
+                    <button type="submit" class="btn btn-success w-100 mt-3">Simpan Review & Kirim Notifikasi</button>
                 </form>
             </div>
         </div>
@@ -68,8 +68,14 @@
         <h5>Riwayat Review Sebelumnya</h5>
         {% for rev in history %}
             <div class="card mb-3 border-primary">
-                <div class="card-header bg-light">
-                    <strong>Status: {{ rev.status }}</strong> — {{ rev.created_at.strftime('%Y-%m-%d %H:%M') }}
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>Status: {{ rev.status }}</strong> — {{ rev.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </div>
+                    <!-- TOMBOL EDIT BARU -->
+                    <button type="button" class="btn btn-sm btn-outline-warning text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#editModal-{{ rev.id }}">
+                        ✏️ Edit
+                    </button>
                 </div>
                 <div class="card-body">
                     {% for item in rev.items|sort(attribute='order') %}
@@ -101,6 +107,50 @@
                     {% endfor %}
                 </div>
             </div>
+
+            <!-- MODAL FORM EDIT REVIEW -->
+            <div class="modal fade" id="editModal-{{ rev.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <form method="post" action="{{ url_for('reviewer.edit_review', review_id=rev.id) }}">
+                            <div class="modal-header bg-warning">
+                                <h5 class="modal-title text-dark fw-bold">Edit Riwayat Review</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Ubah Status</label>
+                                    <select name="status" class="form-select" required>
+                                        {% for s in ['Upload Baru', 'Revisi', 'Disetujui'] %}
+                                            <option value="{{ s }}" {% if s == rev.status %}selected{% endif %}>{{ s }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <hr>
+                                <label class="form-label fw-bold">Ubah Catatan</label>
+                                {% for item in rev.items|sort(attribute='order') %}
+                                    <div class="mb-2">
+                                        {% if item.screenshot_path %}
+                                            <small class="text-muted d-block mb-1">Gambar ke-{{ loop.index }}</small>
+                                        {% else %}
+                                            <small class="text-muted d-block mb-1">Catatan ke-{{ loop.index }}</small>
+                                        {% endif %}
+                                        <textarea name="notes[]" class="form-control" rows="2">{{ item.notes or '' }}</textarea>
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted fst-italic">Tidak ada catatan teks pada review ini.</p>
+                                {% endfor %}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- AKHIR MODAL EDIT -->
+
         {% else %}
             <p class="text-muted">Belum ada riwayat review.</p>
         {% endfor %}
@@ -108,7 +158,7 @@
 </div>
 
 <script>
-    // JS Drag & Drop / Paste tetap sama
+    // JS Drag & Drop / Paste tetap sama (Tidak ada yang diubah)
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const previewContainer = document.getElementById('previewContainer');

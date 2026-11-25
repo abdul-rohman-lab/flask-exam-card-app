@@ -54,6 +54,13 @@ class Document(db.Model):
     exam_type  = db.Column(db.String(50))
     classes    = db.Column(db.String(100))
 
+    # Kolom untuk Link
+    duplicate_link = db.Column(db.String(500), nullable=True)
+    collab_link    = db.Column(db.String(500), nullable=True)
+    
+    # KOLOM BARU: Untuk tanda centang Editor
+    is_processed   = db.Column(db.Boolean, default=False, nullable=False)
+
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
@@ -76,7 +83,6 @@ class ReviewItem(db.Model):
     screenshot_path = db.Column(db.String(500))
     order           = db.Column(db.Integer, default=0)
 
-# TABEL BARU UNTUK JADWAL UJIAN
 class ExamSchedule(db.Model):
     __tablename__ = "exam_schedules"
     id         = db.Column(db.Integer, primary_key=True)

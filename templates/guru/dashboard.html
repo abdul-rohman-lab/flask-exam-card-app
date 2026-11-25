@@ -3,6 +3,9 @@
 {% block content %}
 <h4 class="mb-3">Dashboard Guru — {{ current_user.username }}</h4>
 
+<!-- ========================================== -->
+<!-- BAGIAN 1: FORM UPLOAD DOKUMEN BARU         -->
+<!-- ========================================== -->
 <div class="card mb-4 shadow-sm">
   <div class="card-body">
     <h5 class="card-title">Unggah Dokumen Kartu Soal</h5>
@@ -45,15 +48,75 @@
   </div>
 </div>
 
-<!-- Tabel Dokumen Saya (Tetap sama) -->
-<!-- ... -->
+<!-- ========================================== -->
+<!-- BAGIAN 2: TABEL RIWAYAT & STATUS DOKUMEN   -->
+<!-- ========================================== -->
+<div class="card shadow-sm mt-4">
+  <div class="card-body">
+    <h5 class="card-title mb-3">Riwayat & Status Dokumen Saya</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Judul / Mapel</th>
+            <th>Jenis Ujian</th>
+            <th>Kelas</th>
+            <th>Status Terakhir</th>
+            <th>Terakhir Diperbarui</th>
+            <th class="text-center">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in docs %}
+          <tr>
+            <td>
+              <div class="fw-bold">{{ d.subject }}</div>
+              <small class="text-muted">{{ d.title or d.filename }}</small>
+            </td>
+            <td>{{ d.exam_type }}</td>
+            <td>{{ d.classes }}</td>
+            <td>
+              <!-- Logika Pewarnaan Badge Berdasarkan Status -->
+              {% set cls = 'success' if d.status == 'Disetujui' 
+                else ('warning text-dark' if d.status == 'Revisi' 
+                else ('info text-dark' if d.status == 'Sudah Direvisi Oleh Guru' 
+                else 'primary')) %}
+              <span class="badge bg-{{ cls }}">{{ d.status }}</span>
+            </td>
+            <td>
+              <span class="text-muted" style="font-size: 0.9rem;">
+                {{ d.updated_at.strftime('%d %b %Y - %H:%M') }}
+              </span>
+            </td>
+            <td class="text-center">
+              <!-- Tombol menuju halaman detail untuk melihat feedback/screenshot -->
+              <a href="{{ url_for('guru.detail', doc_id=d.id) }}" class="btn btn-sm btn-outline-primary">
+                Lihat Detail
+              </a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">
+              <em>Belum ada dokumen yang diunggah. Silakan gunakan form di atas.</em>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
+<!-- ========================================== -->
+<!-- BAGIAN 3: JAVASCRIPT DROPDOWN DINAMIS      -->
+<!-- ========================================== -->
 <script>
-    // Ambil data mapping dari Python
+    // Ambil data mapping dari Python (Jinja2)
     const mappings = {{ mappings_json|safe }};
     const subjectSelect = document.getElementById('subjectSelect');
     
-    // Isi dropdown mapel berdasarkan data
+    // Isi dropdown mapel berdasarkan data pemetaan dari Admin
     Object.keys(mappings).forEach(subject => {
         const opt = document.createElement('option');
         opt.value = subject;
@@ -61,7 +124,7 @@
         subjectSelect.appendChild(opt);
     });
 
-    // Event listener saat mapel dipilih
+    // Event listener saat mapel dipilih (untuk menampilkan checkbox kelas)
     subjectSelect.addEventListener('change', function() {
         const container = document.getElementById('classContainer');
         container.innerHTML = ''; 
@@ -78,6 +141,7 @@
                 container.appendChild(div);
             });
         } else {
+            // Jika mapel belum dipilih atau tidak ada kelas
             container.innerHTML = '<span class="text-muted fst-italic">Pilih mata pelajaran terlebih dahulu...</span>';
         }
     });

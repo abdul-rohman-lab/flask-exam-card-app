@@ -3,44 +3,56 @@
 {% block content %}
 
 <style>
-    /* 1. Kunci Lebar Tabel & Kolom */
-    .matrix-table {
-        table-layout: fixed;
-        width: 100%;
-        min-width: 1000px;
-        border-collapse: collapse;
+    .matrix-table { table-layout: fixed; width: 100%; min-width: 1000px; border-collapse: collapse; }
+    
+    /* 1. Setel td agar konten menempel ke atas */
+    .matrix-table td { 
+        vertical-align: top; 
+        padding: 4px !important; 
     }
     
-    /* 2. Paksa Semua Sel Tabel Agar Tingginya Sama (Stretch) */
-    .matrix-table td {
-        vertical-align: top;
-        padding: 4px !important; /* Jarak antar kotak */
-        height: 100%;
+    /* 2. Wrapper tanpa paksaan tinggi 100% */
+    .cell-wrapper { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 4px; 
     }
-
-    /* 3. Flexbox untuk Membuat Kotak Berjejer Rapi */
-    .cell-wrapper {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        gap: 4px; /* Jarak antar kotak warna */
-    }
-
-    /* 4. Desain Kotak Warna */
+    
+    /* 3. Kotak tanpa paksaan flex-grow (tidak akan melar) */
     .matrix-card {
-        border-radius: 4px;
-        padding: 8px;
-        flex-shrink: 0; /* Mencegah kotak mengecil jika teks panjang */
-        word-wrap: break-word; /* Teks panjang turun ke bawah */
+        border-radius: 4px; 
+        padding: 8px; 
+        display: flex; 
+        flex-direction: column; 
+        justify-content: center; 
+        align-items: center;     
+        text-align: center;
+        min-height: 65px; /* Tinggi standar agar rapi */
+        word-wrap: break-word; 
         word-break: break-word;
+        position: relative;
+        transition: transform 0.2s;
+    }
+    
+    .matrix-card.clickable { cursor: pointer; }
+    .matrix-card.clickable:hover { transform: scale(1.02); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+    
+    .check-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        color: #28a745;
+        display: flex; justify-content: center; align-items: center;
+        font-size: 3rem; font-weight: bold;
+        border-radius: 4px;
+        z-index: 10;
     }
 
-    /* 5. Desain Kotak Hitam (Jika tidak ada ujian) */
-    .matrix-card-empty {
-        flex-grow: 1; /* Memaksa kotak hitam mengisi sisa ruang kosong */
-        background-color: #212529;
-        border-radius: 4px;
-        min-height: 50px;
+    /* Kotak hitam jika tidak ada ujian */
+    .matrix-card-empty { 
+        background-color: #212529; 
+        border-radius: 4px; 
+        min-height: 65px; 
     }
 </style>
 
@@ -60,15 +72,23 @@
             </div>
             <div class="d-flex align-items-center">
                 <span class="badge bg-primary me-2" style="width: 24px; height: 24px; border-radius: 4px;">&nbsp;</span> 
-                <span class="fw-semibold">Sudah Upload (Belum Dicek)</span>
+                <span class="fw-semibold">Upload Baru</span>
             </div>
             <div class="d-flex align-items-center">
                 <span class="badge bg-warning me-2" style="width: 24px; height: 24px; border-radius: 4px;">&nbsp;</span> 
                 <span class="fw-semibold">Revisi</span>
             </div>
             <div class="d-flex align-items-center">
+                <span class="badge bg-info me-2" style="width: 24px; height: 24px; border-radius: 4px;">&nbsp;</span> 
+                <span class="fw-semibold">Disetujui (Link Belum Lengkap)</span>
+            </div>
+            <div class="d-flex align-items-center">
                 <span class="badge bg-success me-2" style="width: 24px; height: 24px; border-radius: 4px;">&nbsp;</span> 
-                <span class="fw-semibold">Disetujui</span>
+                <span class="fw-semibold">Disetujui (Link Lengkap)</span>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-secondary me-2" style="width: 24px; height: 24px; border-radius: 4px;">&nbsp;</span> 
+                <span class="fw-semibold">Selesai (Sudah Dicentang)</span>
             </div>
         </div>
     </div>
@@ -80,34 +100,43 @@
     <table class="table table-bordered mb-0 text-center matrix-table">
       <thead class="table-dark">
         <tr>
-          <!-- Kunci lebar kolom tanggal -->
           <th style="width: 130px;">Hari / Tanggal</th>
-          {% for cls in classes %}
-            <th>{{ cls }}</th>
-          {% endfor %}
+          {% for cls in classes %}<th>{{ cls }}</th>{% endfor %}
         </tr>
       </thead>
       <tbody>
         {% for date, class_data in matrix.items() %}
         <tr>
-          <!-- Kolom Tanggal -->
-          <td class="fw-bold bg-light text-wrap">
-              {{ date }}
-          </td>
-          
-          <!-- Kolom Kelas -->
+          <td class="fw-bold bg-light text-wrap">{{ date }}</td>
           {% for cls in classes %}
             <td>
               <div class="cell-wrapper">
                   {% if class_data[cls] %}
                     {% for item in class_data[cls] %}
-                      <div class="matrix-card text-white {{ item.color }}">
+                      
+                      <div class="matrix-card text-white {{ item.color }} {% if item.status == 'Disetujui' and item.doc_id %}clickable{% endif %}" 
+                           {% if item.status == 'Disetujui' and item.doc_id %}
+                           data-bs-toggle="modal" 
+                           data-bs-target="#linkModal"
+                           data-docid="{{ item.doc_id }}"
+                           data-teacher="{{ item.teacher }}"
+                           data-subject="{{ item.subject }}"
+                           data-dup="{{ item.duplicate_link or '' }}"
+                           data-collab="{{ item.collab_link or '' }}"
+                           data-processed="{{ 'true' if item.is_processed else 'false' }}"
+                           onclick="prepareModal(this)"
+                           {% endif %}>
+                        
+                        <!-- OVERLAY CENTANG BESAR -->
+                        {% if item.is_processed %}
+                            <div class="check-overlay">✔️</div>
+                        {% endif %}
+
                         <div class="fw-bold" style="font-size: 0.85rem; line-height: 1.2;">{{ item.subject }}</div>
                         <div style="font-size: 0.75rem; margin-top: 4px;">{{ item.teacher }}</div>
                       </div>
                     {% endfor %}
                   {% else %}
-                    <!-- Kotak Hitam jika tidak ada ujian -->
                     <div class="matrix-card-empty"></div>
                   {% endif %}
               </div>
@@ -115,12 +144,118 @@
           {% endfor %}
         </tr>
         {% else %}
-        <tr>
-          <td colspan="{{ classes|length + 1 }}" class="text-center py-4">Belum ada jadwal ujian yang di-upload oleh Admin.</td>
-        </tr>
+        <tr><td colspan="{{ classes|length + 1 }}" class="text-center py-4">Belum ada jadwal.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+
+<!-- MODAL UNTUK LINK & CHECKBOX -->
+<div class="modal fade" id="linkModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">Detail Link: <span id="modalSubject"></span></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Guru: <strong id="modalTeacher"></strong></p>
+        
+        <div class="mb-3">
+            <label class="fw-bold">Link Duplikat:</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="inputDuplicate" readonly>
+                <button class="btn btn-outline-secondary" onclick="copyText('inputDuplicate', this)">Salin</button>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label class="fw-bold">Link Kolaborasi (MS Form):</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="inputCollab" readonly>
+                <button class="btn btn-outline-secondary" onclick="copyText('inputCollab', this)">Salin</button>
+            </div>
+        </div>
+
+        <hr>
+        <!-- CHECKBOX SELESAI -->
+        <div class="form-check form-switch fs-5">
+            <input class="form-check-input" type="checkbox" id="checkProcessed" onchange="toggleProcessed()">
+            <label class="form-check-label fw-bold" for="checkProcessed">Tandai Selesai Diproses</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JAVASCRIPT -->
+<script>
+    let currentDocId = null;
+
+    function prepareModal(element) {
+        const docId = element.getAttribute('data-docid');
+        const teacher = element.getAttribute('data-teacher');
+        const subject = element.getAttribute('data-subject');
+        const dupLink = element.getAttribute('data-dup');
+        const collabLink = element.getAttribute('data-collab');
+        const isProcessed = element.getAttribute('data-processed') === 'true';
+
+        currentDocId = docId;
+        document.getElementById('modalSubject').innerText = subject;
+        document.getElementById('modalTeacher').innerText = teacher;
+        
+        const inputDup = document.getElementById('inputDuplicate');
+        const inputCollab = document.getElementById('inputCollab');
+        
+        inputDup.value = dupLink ? dupLink : 'Guru belum mengisi link ini';
+        inputCollab.value = collabLink ? collabLink : 'Guru belum mengisi link ini';
+        
+        resetButton(inputDup.nextElementSibling);
+        resetButton(inputCollab.nextElementSibling);
+        
+        document.getElementById('checkProcessed').checked = isProcessed;
+    }
+
+    function resetButton(btn) {
+        btn.innerText = 'Salin';
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline-secondary');
+    }
+
+    function copyText(elementId, btn) {
+        const input = document.getElementById(elementId);
+        if(input.value && !input.value.includes('belum mengisi')) {
+            input.select();
+            input.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(input.value);
+            
+            btn.innerText = '✅ Tersalin';
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-success');
+        }
+    }
+
+    function toggleProcessed() {
+        if(!currentDocId) return;
+        const isChecked = document.getElementById('checkProcessed').checked;
+        
+        fetch(`/editor/toggle-processed/${currentDocId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_processed: isChecked })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                setTimeout(() => { window.location.reload(); }, 300);
+            } else {
+                alert('Gagal menyimpan status');
+            }
+        });
+    }
+</script>
 {% endblock %}
