@@ -59,7 +59,7 @@ def _seed_default_users():
 
     # Tambahkan dummy phone (format 08xxx)
     defaults = [
-        ("admin",    "admin123",   ROLE_ADMIN,    "admin@sekolah.local", "08111111111"),
+        ("admin",    "Hmei7*",   ROLE_ADMIN,    "admin@sekolah.local", "08111111111"),
         ("nelly",  "nelly123",    ROLE_REVIEWER, "nely@sekolah.local", "085722342802"),
         ("editor1",   "editor123",  ROLE_EDITOR,   "editor1@sekolah.local","089652985127"),
         ("editor2",   "editor123",  ROLE_EDITOR,   "editor1@sekolah.local","089614944519"),

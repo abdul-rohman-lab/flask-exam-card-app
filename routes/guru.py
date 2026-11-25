@@ -9,7 +9,8 @@ from flask_login import login_required, current_user
 from extensions import db
 from models import (
     Document, User, TeachingAssignment, 
-    ROLE_GURU, ROLE_REVIEWER, STATUS_UPLOAD_BARU, STATUS_REVISI, STATUS_SUDAH_DIREVISI, STATUS_DISETUJUI
+    ROLE_GURU, ROLE_REVIEWER, ROLE_EDITOR, 
+    STATUS_UPLOAD_BARU, STATUS_REVISI, STATUS_SUDAH_DIREVISI, STATUS_DISETUJUI
 )
 from routes.decorators import role_required
 from routes.wa_helper import send_wa
@@ -55,20 +56,16 @@ def upload():
     classes_str = ", ".join(classes_list)
     generated_title = f"{subject} - {exam_type} ({classes_str})"
 
-    # ==========================================
-    # FITUR BARU: CEK DAN HAPUS DATA DUPLIKAT LAMA
-    # ==========================================
+    # Fitur: Hapus duplikat lama
     old_docs = Document.query.filter_by(
         user_id=current_user.id,
         subject=subject,
         exam_type=exam_type,
         classes=classes_str
     ).all()
-    
     for old_doc in old_docs:
-        db.session.delete(old_doc) # Hapus data lama yang duplikat
+        db.session.delete(old_doc)
     db.session.commit()
-    # ==========================================
 
     doc = Document(
         user_id=current_user.id,
@@ -83,6 +80,7 @@ def upload():
     db.session.add(doc)
     db.session.commit()
     
+    # Kirim WA ke Reviewer (Bu Neli)
     reviewers = User.query.filter_by(role=ROLE_REVIEWER).all()
     for rev in reviewers:
         if rev.phone:
@@ -117,6 +115,7 @@ def update_document(doc_id):
     doc.status    = STATUS_UPLOAD_BARU
     db.session.commit()
 
+    # Kirim WA ke Reviewer (Bu Neli)
     reviewers = User.query.filter_by(role=ROLE_REVIEWER).all()
     for rev in reviewers:
         if rev.phone:
@@ -153,6 +152,9 @@ def download(doc_id):
         abort(403)
     return redirect(doc.file_path)
 
+# ==========================================
+# ROUTE: SIMPAN LINK DUPLIKAT & KOLABORASI (+ WA EDITOR)
+# ==========================================
 @guru_bp.route("/document/<int:doc_id>/submit-links", methods=["POST"])
 @login_required
 @role_required(ROLE_GURU)
@@ -175,6 +177,21 @@ def submit_links(doc_id):
     doc.duplicate_link = duplicate_link
     doc.collab_link = collab_link
     db.session.commit()
+
+    # === FITUR BARU: KIRIM WA KE SEMUA EDITOR ===
+    editors = User.query.filter_by(role=ROLE_EDITOR).all()
+    for ed in editors:
+        if ed.phone:
+            msg_editor = (
+                f"Halo {ed.username},\n\n"
+                f"*LINK ADMINISTRASI LENGKAP*\n"
+                f"Guru: {current_user.username}\n"
+                f"Judul: {doc.title}\n\n"
+                f"Guru telah mengunggah Link Duplikat & Link Kolaborasi. "
+                f"Silakan cek di Dashboard Editor untuk menyalin link dan menandai selesai:\n"
+                f"https://progres.guardbansal.cloud/editor/dashboard"
+            )
+            send_wa(ed.phone, msg_editor)
 
     flash("Link Duplikat dan Link Kolaborasi berhasil disimpan.", "success")
     return redirect(url_for("guru.detail", doc_id=doc.id))
