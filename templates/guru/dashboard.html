@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard Guru{% endblock %}
+{% block content %}
+<h4 class="mb-3">Dashboard Guru — {{ current_user.username }}</h4>
+
+<div class="card mb-4 shadow-sm">
+  <div class="card-body">
+    <h5 class="card-title">Unggah Dokumen Kartu Soal</h5>
+    <form method="post" action="{{ url_for('guru.upload') }}" class="row g-3">
+      
+      <div class="col-md-4">
+        <label class="form-label fw-bold">1. Mata Pelajaran</label>
+        <select name="subject" id="subjectSelect" class="form-select" required>
+            <option value="">-- Pilih Mapel --</option>
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label fw-bold">2. Jenis Ujian</label>
+        <select name="exam_type" class="form-select" required>
+            <option value="">-- Pilih Ujian --</option>
+            <option value="ASTS Ganjil">ASTS Ganjil</option>
+            <option value="ASAS">ASAS</option>
+            <option value="ASTS Genap">ASTS Genap</option>
+            <option value="ASAT">ASAT</option>
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label fw-bold">3. Link Dokumen (SharePoint/Drive)</label>
+        <input type="url" name="file_url" class="form-control" placeholder="https://..." required>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label fw-bold">4. Pilih Kelas (Bisa lebih dari 1)</label>
+        <div id="classContainer" class="d-flex flex-wrap gap-3 p-3 bg-light border rounded">
+            <span class="text-muted fst-italic">Pilih mata pelajaran terlebih dahulu...</span>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <button class="btn btn-primary w-100 mt-2">Kirim Link ke Reviewer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Tabel Dokumen Saya (Tetap sama) -->
+<!-- ... -->
+
+<script>
+    // Ambil data mapping dari Python
+    const mappings = {{ mappings_json|safe }};
+    const subjectSelect = document.getElementById('subjectSelect');
+    
+    // Isi dropdown mapel berdasarkan data
+    Object.keys(mappings).forEach(subject => {
+        const opt = document.createElement('option');
+        opt.value = subject;
+        opt.textContent = subject;
+        subjectSelect.appendChild(opt);
+    });
+
+    // Event listener saat mapel dipilih
+    subjectSelect.addEventListener('change', function() {
+        const container = document.getElementById('classContainer');
+        container.innerHTML = ''; 
+        
+        const selectedSubject = this.value;
+        if (selectedSubject && mappings[selectedSubject]) {
+            mappings[selectedSubject].forEach(cls => {
+                const div = document.createElement('div');
+                div.className = 'form-check';
+                div.innerHTML = `
+                    <input class="form-check-input" type="checkbox" name="classes" value="${cls}" id="cls_${cls}">
+                    <label class="form-check-label fw-bold text-dark" for="cls_${cls}">${cls}</label>
+                `;
+                container.appendChild(div);
+            });
+        } else {
+            container.innerHTML = '<span class="text-muted fst-italic">Pilih mata pelajaran terlebih dahulu...</span>';
+        }
+    });
+</script>
+{% endblock %}

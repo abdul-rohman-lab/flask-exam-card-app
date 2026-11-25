@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% block title %}Review: {{ doc.title }}{% endblock %}
+
+{% block content %}
+<style>
+    .drop-zone { border: 2px dashed #ccc; border-radius: 5px; padding: 20px; text-align: center; color: #aaa; cursor: pointer; transition: 0.3s; }
+    .drop-zone.dragover { border-color: #0d6efd; background-color: #f8f9fa; }
+    .preview-item { border: 1px solid #ddd; padding: 10px; border-radius: 5px; margin-bottom: 10px; background: #fff; position: relative;}
+    .preview-img { max-width: 100%; max-height: 200px; border-radius: 3px; margin-bottom: 10px; }
+    .btn-remove { position: absolute; top: 10px; right: 10px; }
+</style>
+
+<div class="row">
+    <!-- KOLOM KIRI: PREVIEW IFrame -->
+    <div class="col-md-7 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span class="text-truncate" style="max-width: 80%;">📄 {{ doc.title }}</span>
+                <a href="{{ doc.file_path }}" target="_blank" class="btn btn-sm btn-outline-light">Buka di Tab Baru</a>
+            </div>
+            <div class="card-body p-0" style="height: 75vh;">
+                <!-- Gunakan Iframe untuk menampilkan Link -->
+                <iframe src="{{ doc.file_path }}" width="100%" height="100%" style="border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- KOLOM KANAN: FORM REVIEW -->
+    <div class="col-md-5 mb-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">Form Review</div>
+            <div class="card-body">
+                
+                {% if doc.status == 'Sudah Direvisi Oleh Guru' %}
+                <div class="alert alert-info py-2 mb-3">
+                    <i>💡 Guru telah mengirim link perbaikan. Silakan cek ulang file di sebelah kiri.</i>
+                </div>
+                {% endif %}
+
+                <form method="post" enctype="multipart/form-data" id="reviewForm">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Status Akhir Dokumen</label>
+                        <select name="status" class="form-select" required>
+                            {% for s in ['Upload Baru', 'Revisi', 'Disetujui'] %}
+                                <option value="{{ s }}" {% if s == doc.status %}selected{% endif %}>{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <hr>
+                    <label class="form-label fw-bold">Temuan / Catatan Revisi</label>
+                    
+                    <div class="drop-zone mb-3" id="dropZone">
+                        <p class="mb-1">Klik, Drag & Drop, atau Paste (Ctrl+V) gambar di sini.</p>
+                        <input type="file" id="fileInput" name="screenshots[]" multiple accept="image/*" style="display: none;">
+                    </div>
+
+                    <div id="previewContainer"></div>
+                    <button type="submit" class="btn btn-success w-100 mt-3">Simpan Review & Kirim Email</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <h5>Riwayat Review Sebelumnya</h5>
+        {% for rev in history %}
+            <div class="card mb-3 border-primary">
+                <div class="card-header bg-light">
+                    <strong>Status: {{ rev.status }}</strong> — {{ rev.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </div>
+                <div class="card-body">
+                    {% for item in rev.items|sort(attribute='order') %}
+                        <div class="mb-4">
+                            {% if item.screenshot_path %}
+                                <img src="{{ url_for('reviewer.screenshot', filename=item.screenshot_path) }}" 
+                                     class="img-fluid border rounded mb-2 d-block" 
+                                     style="max-height:300px; cursor: pointer;"
+                                     data-bs-toggle="modal" data-bs-target="#reviewModal-{{ item.id }}">
+                            {% endif %}
+                            <p class="text-dark bg-light p-2 rounded mb-0" style="white-space: pre-wrap;"><em>"{{ item.notes or '(tanpa catatan)' }}"</em></p>
+                        </div>
+
+                        {% if item.screenshot_path %}
+                        <div class="modal fade" id="reviewModal-{{ item.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-xl modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-body text-center bg-dark">
+                                        <img src="{{ url_for('reviewer.screenshot', filename=item.screenshot_path) }}" class="img-fluid" style="max-height: 75vh;">
+                                    </div>
+                                    <div class="modal-footer flex-column align-items-start">
+                                        <h6 class="fw-bold mb-2">Catatan:</h6>
+                                        <p class="mb-0 w-100 text-start text-dark" style="white-space: pre-wrap;">{{ item.notes or '(Tanpa catatan)' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <p class="text-muted">Belum ada riwayat review.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    // JS Drag & Drop / Paste tetap sama
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const previewContainer = document.getElementById('previewContainer');
+    let uploadedFiles = []; 
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault(); dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+    });
+    document.addEventListener('paste', (e) => {
+        if (e.clipboardData.files.length) handleFiles(e.clipboardData.files);
+    });
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) handleFiles(e.target.files);
+    });
+
+    function handleFiles(files) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (!file.type.startsWith('image/')) continue;
+            uploadedFiles.push(file);
+            renderPreview(file, uploadedFiles.length - 1);
+        }
+        updateFileInput();
+    }
+
+    function renderPreview(file, index) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const div = document.createElement('div');
+            div.className = 'preview-item';
+            div.id = `preview-${index}`;
+            div.innerHTML = `
+                <button type="button" class="btn btn-sm btn-danger btn-remove" onclick="removeFile(${index})">&times;</button>
+                <img src="${e.target.result}" class="preview-img">
+                <textarea name="notes[]" class="form-control form-control-sm" rows="2" placeholder="Tulis keterangan..."></textarea>
+            `;
+            previewContainer.appendChild(div);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    window.removeFile = function(index) {
+        uploadedFiles[index] = null;
+        document.getElementById(`preview-${index}`).remove();
+        updateFileInput();
+    }
+
+    function updateFileInput() {
+        const dt = new DataTransfer();
+        uploadedFiles.forEach(file => { if (file !== null) dt.items.add(file); });
+        fileInput.files = dt.files;
+    }
+</script>
+{% endblock %}

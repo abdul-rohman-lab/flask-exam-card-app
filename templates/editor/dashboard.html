@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block title %}Rekap Progress Editor{% endblock %}
+{% block content %}
+
+<style>
+    /* 1. Kunci Lebar Tabel & Kolom */
+    .matrix-table {
+        table-layout: fixed;
+        width: 100%;
+        min-width: 1000px;
+        border-collapse: collapse;
+    }
+    
+    /* 2. Paksa Semua Sel Tabel Agar Tingginya Sama (Stretch) */
+    .matrix-table td {
+        vertical-align: top;
+        padding: 4px !important; /* Jarak antar kotak */
+        height: 100%;
+    }
+
+    /* 3. Flexbox untuk Membuat Kotak Berjejer Rapi */
+    .cell-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        gap: 4px; /* Jarak antar kotak warna */
+    }
+
+    /* 4. Desain Kotak Warna */
+    .matrix-card {
+        border-radius: 4px;
+        padding: 8px;
+        flex-shrink: 0; /* Mencegah kotak mengecil jika teks panjang */
+        word-wrap: break-word; /* Teks panjang turun ke bawah */
+        word-break: break-word;
+    }
+
+    /* 5. Desain Kotak Hitam (Jika tidak ada ujian) */
+    .matrix-card-empty {
+        flex-grow: 1; /* Memaksa kotak hitam mengisi sisa ruang kosong */
+        background-color: #212529;
+        border-radius: 4px;
+        min-height: 50px;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">Matriks Progress Kartu Soal</h4>
+  <a class="btn btn-success" href="{{ url_for('editor.export_approved') }}">⬇ Unduh Excel (Disetujui)</a>
+</div>
+
+<!-- LEGENDA WARNA -->
+<div class="card mb-3 shadow-sm bg-light">
+    <div class="card-body py-3">
+        <h6 class="mb-3 fw-bold text-secondary">Keterangan Warna:</h6>
+        <div class="d-flex flex-wrap gap-4">
+            <div class="d-flex align-items-center">
+                <span class="badge bg-danger me-2" style="width: 24px; height: 24px; border-radius: 4px;">&nbsp;</span> 
+                <span class="fw-semibold">Belum Upload</span>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-primary me-2" style="width: 24px; height: 24px; border-radius: 4px;">&nbsp;</span> 
+                <span class="fw-semibold">Sudah Upload (Belum Dicek)</span>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-warning me-2" style="width: 24px; height: 24px; border-radius: 4px;">&nbsp;</span> 
+                <span class="fw-semibold">Revisi</span>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-success me-2" style="width: 24px; height: 24px; border-radius: 4px;">&nbsp;</span> 
+                <span class="fw-semibold">Disetujui</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MATRIKS TABEL -->
+<div class="card shadow-sm">
+  <div class="card-body p-0 table-responsive">
+    <table class="table table-bordered mb-0 text-center matrix-table">
+      <thead class="table-dark">
+        <tr>
+          <!-- Kunci lebar kolom tanggal -->
+          <th style="width: 130px;">Hari / Tanggal</th>
+          {% for cls in classes %}
+            <th>{{ cls }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for date, class_data in matrix.items() %}
+        <tr>
+          <!-- Kolom Tanggal -->
+          <td class="fw-bold bg-light text-wrap">
+              {{ date }}
+          </td>
+          
+          <!-- Kolom Kelas -->
+          {% for cls in classes %}
+            <td>
+              <div class="cell-wrapper">
+                  {% if class_data[cls] %}
+                    {% for item in class_data[cls] %}
+                      <div class="matrix-card text-white {{ item.color }}">
+                        <div class="fw-bold" style="font-size: 0.85rem; line-height: 1.2;">{{ item.subject }}</div>
+                        <div style="font-size: 0.75rem; margin-top: 4px;">{{ item.teacher }}</div>
+                      </div>
+                    {% endfor %}
+                  {% else %}
+                    <!-- Kotak Hitam jika tidak ada ujian -->
+                    <div class="matrix-card-empty"></div>
+                  {% endif %}
+              </div>
+            </td>
+          {% endfor %}
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="{{ classes|length + 1 }}" class="text-center py-4">Belum ada jadwal ujian yang di-upload oleh Admin.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

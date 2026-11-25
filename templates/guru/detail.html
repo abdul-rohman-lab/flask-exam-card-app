@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Detail Dokumen{% endblock %}
+{% block content %}
+<h4 class="mb-3">Detail Dokumen</h4>
+
+<div class="card mb-4 shadow-sm">
+  <div class="card-body">
+    <h5 class="card-title fw-bold text-primary">{{ doc.title or doc.filename }}</h5>
+    <p class="mb-1"><strong>Status Saat Ini:</strong>
+      {% set cls = 'success' if doc.status == 'Disetujui' 
+                  else ('warning' if doc.status == 'Revisi' 
+                  else ('info' if doc.status == 'Sudah Direvisi Oleh Guru' 
+                  else 'secondary')) %}
+      <span class="badge bg-{{ cls }}">{{ doc.status }}</span>
+    </p>
+    <p class="mb-2"><strong>Terakhir diperbarui:</strong> {{ doc.updated_at.strftime('%Y-%m-%d %H:%M') }}</p>
+    
+    <!-- Tombol Buka Link -->
+    <a class="btn btn-sm btn-outline-primary" href="{{ doc.file_path }}" target="_blank">Buka Link Dokumen</a>
+    <a class="btn btn-sm btn-link" href="{{ url_for('guru.dashboard') }}">← Kembali ke Dashboard</a>
+  </div>
+</div>
+
+<!-- FORM UPDATE LINK (HANYA MUNCUL JIKA STATUS REVISI) -->
+{% if doc.status == 'Revisi' %}
+<div class="alert alert-warning shadow-sm mb-4">
+  <h5 class="alert-heading">Dokumen Perlu Direvisi</h5>
+  <p>Silakan perbaiki file Anda di SharePoint/Drive, lalu tempelkan link barunya di sini.</p>
+  <hr>
+  <form method="post" action="{{ url_for('guru.update_document', doc_id=doc.id) }}" class="row g-3">
+    <div class="col-md-5">
+      <label class="form-label fw-bold">Judul Dokumen</label>
+      <input type="text" name="title" class="form-control" value="{{ doc.title }}" required>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label fw-bold">Link Revisi (Baru)</label>
+      <input type="url" name="file_url" class="form-control" value="{{ doc.file_path }}" required>
+    </div>
+    <div class="col-md-2 d-flex align-items-end">
+      <button class="btn btn-primary w-100" onclick="return confirm('Kirim link revisi ini?')">Kirim</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+<h5>Riwayat Feedback Reviewer</h5>
+{% for rev in doc.reviews|sort(attribute='created_at', reverse=true) %}
+  <div class="card mb-3 border-dark">
+    <div class="card-header bg-dark text-white">
+      Review Tanggal: {{ rev.created_at.strftime('%Y-%m-%d %H:%M') }} | Status Diberikan: <strong>{{ rev.status }}</strong>
+    </div>
+    <div class="card-body">
+      {% for item in rev.items|sort(attribute='order') %}
+        <div class="mb-4">
+          {% if item.screenshot_path %}
+            <!-- Gambar Clickable -->
+            <img src="{{ url_for('reviewer.screenshot', filename=item.screenshot_path) }}"
+                 class="img-fluid border rounded mb-2 d-block" 
+                 style="max-height:350px; cursor: pointer;" 
+                 data-bs-toggle="modal" 
+                 data-bs-target="#imageModal-{{ item.id }}"
+                 title="Klik untuk memperbesar">
+          {% endif %}
+          
+          <!-- Keterangan dengan white-space: pre-wrap agar enter berfungsi -->
+          <div class="p-3 bg-light rounded border" style="white-space: pre-wrap;">
+            <strong>Catatan:</strong><br>
+            {{ item.notes or '(Tanpa catatan)' }}
+          </div>
+        </div>
+
+        <!-- MODAL (POP-UP) UNTUK GAMBAR BESAR -->
+        {% if item.screenshot_path %}
+        <div class="modal fade" id="imageModal-{{ item.id }}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Detail Temuan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body text-center bg-dark">
+                <img src="{{ url_for('reviewer.screenshot', filename=item.screenshot_path) }}" 
+                     class="img-fluid" style="max-height: 75vh;">
+              </div>
+              <div class="modal-footer flex-column align-items-start">
+                <h6 class="fw-bold mb-2">Catatan:</h6>
+                <!-- Tambahkan style white-space: pre-wrap di sini juga -->
+                <p class="mb-0 w-100 text-start text-dark" style="white-space: pre-wrap;">{{ item.notes or '(Tanpa catatan)' }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      {% else %}
+        <p class="text-muted">Tidak ada gambar atau catatan pada review ini.</p>
+      {% endfor %}
+    </div>
+  </div>
+{% else %}
+  <div class="alert alert-info">Belum ada review dari Bu Neli.</div>
+{% endfor %}
+{% endblock %}

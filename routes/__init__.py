@@ -1,0 +1,1 @@
+# Blueprints diimpor langsung di app.py

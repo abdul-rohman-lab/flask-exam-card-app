@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard Admin{% endblock %}
+{% block content %}
+<h4 class="mb-4">Dashboard Admin</h4>
+
+<div class="row">
+    <!-- Form Akun Guru -->
+    <div class="col-md-4">
+        <div class="card mb-4 shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title text-primary">Unggah Akun Guru</h5>
+            <p class="text-muted small">Format: Kolom A = Username, Kolom B = Password, Kolom C = No WA.</p>
+            <form method="post" action="{{ url_for('admin.upload_teachers') }}" enctype="multipart/form-data" class="row g-2">
+              <div class="col-12">
+                <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+              </div>
+              <div class="col-12 mt-2">
+                <button class="btn btn-primary w-100">Unggah Akun</button>
+              </div>
+            </form>
+          </div>
+        </div>
+    </div>
+
+    <!-- Form Mapping Mapel -->
+    <div class="col-md-4">
+        <div class="card mb-4 shadow-sm border-success">
+          <div class="card-body">
+            <h5 class="card-title text-success">Unggah Pemetaan Mengajar</h5>
+            <p class="text-muted small">Format: A = Username, B = Mapel, C dst = Kelas (X-F, XI-F).</p>
+            <form method="post" action="{{ url_for('admin.upload_mapping') }}" enctype="multipart/form-data" class="row g-2">
+              <div class="col-12">
+                <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+              </div>
+              <div class="col-12 mt-2">
+                <button class="btn btn-success w-100">Unggah Pemetaan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+    </div>
+
+    <!-- Form Jadwal Ujian -->
+    <div class="col-md-4">
+        <div class="card mb-4 shadow-sm border-warning">
+          <div class="card-body">
+            <h5 class="card-title text-warning">Unggah Jadwal Ujian</h5>
+            <p class="text-muted small">Format: A = Hari/Tanggal, B = Waktu, C dst = Kelas (X-F, XI-F).</p>
+            <form method="post" action="{{ url_for('admin.upload_schedule') }}" enctype="multipart/form-data" class="row g-2">
+              <div class="col-12">
+                <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+              </div>
+              <div class="col-12 mt-2">
+                <button class="btn btn-warning w-100">Unggah Jadwal</button>
+              </div>
+            </form>
+          </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Tabel Pemetaan Mapel -->
+    <div class="col-md-7">
+        <div class="card mb-4 shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">Data Pemetaan Mengajar</h5>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-sm table-striped align-middle">
+                  <thead>
+                    <tr><th>Guru</th><th>Mapel</th><th>Kelas</th><th>Aksi</th></tr>
+                  </thead>
+                  <tbody>
+                    {% for ta in assignments %}
+                    <tr>
+                      <td>{{ ta.user.username }}</td>
+                      <td>
+                        <form method="post" action="{{ url_for('admin.edit_assignment', assignment_id=ta.id) }}" class="d-flex gap-1">
+                            <input name="subject" class="form-control form-control-sm" value="{{ ta.subject }}" required>
+                      </td>
+                      <td>
+                            <input name="class_name" class="form-control form-control-sm" value="{{ ta.class_name }}" required>
+                      </td>
+                      <td class="d-flex gap-1">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Edit</button>
+                        </form>
+                        <form method="post" action="{{ url_for('admin.delete_assignment', assignment_id=ta.id) }}" onsubmit="return confirm('Hapus pemetaan ini?');">
+                            <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                        </form>
+                      </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="text-center text-muted">Belum ada data.</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+            </div>
+          </div>
+        </div>
+    </div>
+
+    <!-- Tabel Daftar Guru -->
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">Daftar Akun Guru</h5>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-sm table-striped align-middle">
+                  <thead>
+                    <tr><th>Username</th><th>Email / WA</th><th>Aksi</th></tr>
+                  </thead>
+                  <tbody>
+                    {% for g in gurus %}
+                    <tr>
+                      <td class="fw-bold">{{ g.username }}</td>
+                      <td>
+                        <form method="post" action="{{ url_for('admin.edit_guru', user_id=g.id) }}" class="d-flex flex-column gap-1">
+                          <input name="email" class="form-control form-control-sm" placeholder="Email" value="{{ g.email or '' }}">
+                          <input name="phone" class="form-control form-control-sm" placeholder="No. WA (08xx)" value="{{ g.phone or '' }}">
+                      </td>
+                      <td class="d-flex flex-column gap-1">
+                          <button type="submit" class="btn btn-sm btn-outline-primary">Simpan</button>
+                        </form>
+                        <form method="post" action="{{ url_for('admin.delete_guru', user_id=g.id) }}" onsubmit="return confirm('Hapus akun guru ini beserta seluruh dokumennya?');">
+                            <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                        </form>
+                      </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3" class="text-center text-muted">Belum ada akun guru.</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+            </div>
+          </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
