@@ -11,21 +11,34 @@
       </thead>
       <tbody>
         {% for d in docs %}
-        <tr>
+        <!-- Jika ada draft, beri warna latar baris kuning pudar -->
+        <tr class="{% if d.id in drafts %}table-warning{% endif %}">
           <td>{{ d.owner.username }}</td>
           <td>
             <div class="fw-bold text-dark">{{ d.title or d.filename }}</div>
             <small class="text-muted">File: {{ d.filename }}</small>
           </td>
           <td>
-            {% set cls = 'success' if d.status == 'Disetujui' 
-              else ('warning' if d.status == 'Revisi' 
-              else ('info' if d.status == 'Sudah Direvisi Oleh Guru' 
-              else 'secondary')) %}
-            <span class="badge bg-{{ cls }}">{{ d.status }}</span>
+            {% if d.id in drafts %}
+                <!-- TAMPILKAN BADGE DRAF KUNING -->
+                <span class="badge bg-warning text-dark border border-dark">Draf (Belum Final)</span>
+                <br>
+                <small class="text-muted" style="font-size: 0.75rem;">Tujuan: {{ drafts[d.id].target_status }}</small>
+            {% else %}
+                <!-- STATUS NORMAL -->
+                {% set cls = 'success' if d.status == 'Disetujui' 
+                  else ('warning' if d.status == 'Revisi' 
+                  else ('info' if d.status == 'Sudah Direvisi Oleh Guru' 
+                  else 'secondary')) %}
+                <span class="badge bg-{{ cls }}">{{ d.status }}</span>
+            {% endif %}
           </td>
           <td>{{ d.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
-          <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('reviewer.review', doc_id=d.id) }}">Review</a></td>
+          <td>
+            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('reviewer.review', doc_id=d.id) }}">
+                {% if d.id in drafts %}Lanjutkan Draf{% else %}Review{% endif %}
+            </a>
+          </td>
         </tr>
         {% else %}
         <tr><td colspan="5" class="text-center text-muted">Belum ada dokumen masuk.</td></tr>

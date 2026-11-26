@@ -84,7 +84,7 @@ def upload():
     reviewers = User.query.filter_by(role=ROLE_REVIEWER).all()
     for rev in reviewers:
         if rev.phone:
-            msg = f"Halo {rev.username},\n\n*DOKUMEN BARU*\nGuru: {current_user.username}\nJudul: {generated_title}\n\nSilakan cek aplikasi untuk mereview:\nhttps://progres.guardbansal.cloud/reviewer/dashboard"
+            msg = f"Bismillahirrahmanirrahim Bu {rev.username},\n\n*DOKUMEN BARU*\nGuru: {current_user.username}\nJudul: {generated_title}\n\nSilakan cek aplikasi untuk mereview:\nhttps://progres.guardbansal.cloud/reviewer/dashboard"
             send_wa(rev.phone, msg)
             
     flash("Link Dokumen berhasil dikirim ke Bu Nelly.", "success")
@@ -119,7 +119,7 @@ def update_document(doc_id):
     reviewers = User.query.filter_by(role=ROLE_REVIEWER).all()
     for rev in reviewers:
         if rev.phone:
-            msg = f"Halo {rev.username},\n\n*REVISI DARI GURU*\nGuru: {current_user.username}\nJudul: {doc.title}\n\nGuru telah mengunggah link perbaikan. Silakan cek aplikasi:\nhttps://progres.guardbansal.cloud/reviewer/dashboard"
+            msg = f"Bismillahirrahmanirrahim Bu {rev.username},\n\n*REVISI DARI GURU*\nGuru: {current_user.username}\nJudul: {doc.title}\n\nGuru telah mengunggah link perbaikan. Silakan cek aplikasi:\nhttps://progres.guardbansal.cloud/reviewer/dashboard"
             send_wa(rev.phone, msg)
 
     flash("Link revisi berhasil dikirim! Status berubah menjadi 'Upload Baru'.", "success")
@@ -183,7 +183,7 @@ def submit_links(doc_id):
     for ed in editors:
         if ed.phone:
             msg_editor = (
-                f"Halo {ed.username},\n\n"
+                f"Bismillahirrahmanirrahim {ed.username},\n\n"
                 f"*LINK ADMINISTRASI LENGKAP*\n"
                 f"Guru: {current_user.username}\n"
                 f"Judul: {doc.title}\n\n"

@@ -54,11 +54,8 @@ class Document(db.Model):
     exam_type  = db.Column(db.String(50))
     classes    = db.Column(db.String(100))
 
-    # Kolom untuk Link
     duplicate_link = db.Column(db.String(500), nullable=True)
     collab_link    = db.Column(db.String(500), nullable=True)
-    
-    # KOLOM BARU: Untuk tanda centang Editor
     is_processed   = db.Column(db.Boolean, default=False, nullable=False)
 
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -71,8 +68,12 @@ class Review(db.Model):
     id              = db.Column(db.Integer, primary_key=True)
     document_id     = db.Column(db.Integer, db.ForeignKey("documents.id"), nullable=False)
     status          = db.Column(db.String(30), nullable=False)
-    created_at      = db.Column(db.DateTime, default=datetime.now)
     
+    # KOLOM BARU UNTUK FITUR DRAF
+    is_draft        = db.Column(db.Boolean, default=False, nullable=False)
+    target_status   = db.Column(db.String(30), nullable=True) 
+    
+    created_at      = db.Column(db.DateTime, default=datetime.now)
     items = db.relationship("ReviewItem", backref="review", lazy=True, cascade="all, delete-orphan")
 
 class ReviewItem(db.Model):

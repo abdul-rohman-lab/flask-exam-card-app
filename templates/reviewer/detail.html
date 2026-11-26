@@ -11,7 +11,6 @@
 </style>
 
 <div class="row">
-    <!-- KOLOM KIRI: PREVIEW IFrame -->
     <div class="col-md-7 mb-4">
         <div class="card shadow-sm h-100">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
@@ -19,21 +18,19 @@
                 <a href="{{ doc.file_path }}" target="_blank" class="btn btn-sm btn-outline-light">Buka di Tab Baru</a>
             </div>
             <div class="card-body p-0" style="height: 75vh;">
-                <!-- Gunakan Iframe untuk menampilkan Link -->
                 <iframe src="{{ doc.file_path }}" width="100%" height="100%" style="border: none;"></iframe>
             </div>
         </div>
     </div>
 
-    <!-- KOLOM KANAN: FORM REVIEW -->
     <div class="col-md-5 mb-4">
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-primary text-white">Form Review</div>
             <div class="card-body">
                 
-                {% if doc.status == 'Sudah Direvisi Oleh Guru' %}
-                <div class="alert alert-info py-2 mb-3">
-                    <i>💡 Guru telah mengirim link perbaikan. Silakan cek ulang file di sebelah kiri.</i>
+                {% if draft %}
+                <div class="alert alert-warning py-2 mb-3">
+                    <i>💡 Anda memiliki <strong>Draf</strong> yang belum difinalisasi. Silakan lanjutkan mengisi form di bawah ini.</i>
                 </div>
                 {% endif %}
 
@@ -42,7 +39,8 @@
                         <label class="form-label fw-bold">Status Akhir Dokumen</label>
                         <select name="status" class="form-select" required>
                             {% for s in ['Upload Baru', 'Revisi', 'Disetujui'] %}
-                                <option value="{{ s }}" {% if s == doc.status %}selected{% endif %}>{{ s }}</option>
+                                <!-- Jika ada draft, pilih status target draft sebelumnya -->
+                                <option value="{{ s }}" {% if (draft and s == draft.target_status) or (not draft and s == doc.status) %}selected{% endif %}>{{ s }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -56,7 +54,15 @@
                     </div>
 
                     <div id="previewContainer"></div>
-                    <button type="submit" class="btn btn-success w-100 mt-3">Simpan Review & Kirim Notifikasi</button>
+                    
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" name="action" value="draft" class="btn btn-secondary w-50">
+                            💾 Simpan Draft
+                        </button>
+                        <button type="submit" name="action" value="final" class="btn btn-success w-50" onclick="return confirm('Finalisasi review ini dan kirim notifikasi WA?')">
+                            🚀 Finalisasi
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -66,13 +72,36 @@
 <div class="row mt-4">
     <div class="col-12">
         <h5>Riwayat Review Sebelumnya</h5>
+        
+        <!-- TAMPILKAN DRAFT PALING ATAS -->
+        {% if draft %}
+        <div class="card mb-3 border-warning bg-light">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>Status: Draf (Belum Final)</strong> — {{ draft.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    <br><small>Tujuan Status: <strong>{{ draft.target_status }}</strong></small>
+                </div>
+            </div>
+            <div class="card-body">
+                {% for item in draft.items|sort(attribute='order') %}
+                    <div class="mb-4">
+                        {% if item.screenshot_path %}
+                            <img src="{{ url_for('reviewer.screenshot', filename=item.screenshot_path) }}" class="img-fluid border rounded mb-2 d-block" style="max-height:300px;">
+                        {% endif %}
+                        <p class="text-dark bg-white p-2 rounded mb-0 border" style="white-space: pre-wrap;"><em>"{{ item.notes or '(tanpa catatan)' }}"</em></p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- RIWAYAT FINAL -->
         {% for rev in history %}
             <div class="card mb-3 border-primary">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <div>
                         <strong>Status: {{ rev.status }}</strong> — {{ rev.created_at.strftime('%Y-%m-%d %H:%M') }}
                     </div>
-                    <!-- TOMBOL EDIT BARU -->
                     <button type="button" class="btn btn-sm btn-outline-warning text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#editModal-{{ rev.id }}">
                         ✏️ Edit
                     </button>
@@ -81,41 +110,22 @@
                     {% for item in rev.items|sort(attribute='order') %}
                         <div class="mb-4">
                             {% if item.screenshot_path %}
-                                <img src="{{ url_for('reviewer.screenshot', filename=item.screenshot_path) }}" 
-                                     class="img-fluid border rounded mb-2 d-block" 
-                                     style="max-height:300px; cursor: pointer;"
-                                     data-bs-toggle="modal" data-bs-target="#reviewModal-{{ item.id }}">
+                                <img src="{{ url_for('reviewer.screenshot', filename=item.screenshot_path) }}" class="img-fluid border rounded mb-2 d-block" style="max-height:300px; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#reviewModal-{{ item.id }}">
                             {% endif %}
                             <p class="text-dark bg-light p-2 rounded mb-0" style="white-space: pre-wrap;"><em>"{{ item.notes or '(tanpa catatan)' }}"</em></p>
                         </div>
-
-                        {% if item.screenshot_path %}
-                        <div class="modal fade" id="reviewModal-{{ item.id }}" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-xl modal-dialog-centered">
-                                <div class="modal-content">
-                                    <div class="modal-body text-center bg-dark">
-                                        <img src="{{ url_for('reviewer.screenshot', filename=item.screenshot_path) }}" class="img-fluid" style="max-height: 75vh;">
-                                    </div>
-                                    <div class="modal-footer flex-column align-items-start">
-                                        <h6 class="fw-bold mb-2">Catatan:</h6>
-                                        <p class="mb-0 w-100 text-start text-dark" style="white-space: pre-wrap;">{{ item.notes or '(Tanpa catatan)' }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
                     {% endfor %}
                 </div>
             </div>
 
-            <!-- MODAL FORM EDIT REVIEW -->
+            <!-- MODAL EDIT -->
             <div class="modal fade" id="editModal-{{ rev.id }}" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <form method="post" action="{{ url_for('reviewer.edit_review', review_id=rev.id) }}">
                             <div class="modal-header bg-warning">
                                 <h5 class="modal-title text-dark fw-bold">Edit Riwayat Review</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
                                 <div class="mb-3">
@@ -130,15 +140,8 @@
                                 <label class="form-label fw-bold">Ubah Catatan</label>
                                 {% for item in rev.items|sort(attribute='order') %}
                                     <div class="mb-2">
-                                        {% if item.screenshot_path %}
-                                            <small class="text-muted d-block mb-1">Gambar ke-{{ loop.index }}</small>
-                                        {% else %}
-                                            <small class="text-muted d-block mb-1">Catatan ke-{{ loop.index }}</small>
-                                        {% endif %}
                                         <textarea name="notes[]" class="form-control" rows="2">{{ item.notes or '' }}</textarea>
                                     </div>
-                                {% else %}
-                                    <p class="text-muted fst-italic">Tidak ada catatan teks pada review ini.</p>
                                 {% endfor %}
                             </div>
                             <div class="modal-footer">
@@ -149,16 +152,15 @@
                     </div>
                 </div>
             </div>
-            <!-- AKHIR MODAL EDIT -->
-
         {% else %}
-            <p class="text-muted">Belum ada riwayat review.</p>
+            {% if not draft %}
+                <p class="text-muted">Belum ada riwayat review final.</p>
+            {% endif %}
         {% endfor %}
     </div>
 </div>
 
 <script>
-    // JS Drag & Drop / Paste tetap sama (Tidak ada yang diubah)
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const previewContainer = document.getElementById('previewContainer');
